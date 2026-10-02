@@ -68,12 +68,29 @@ function escapeHTML(s) {
 }
 
 /* ============================================================
-   开奖数据加载与渲染（数据存档于 GitHub，随部署更新）
+   开奖数据加载与渲染
+   数据存档于 GitHub 仓库，Actions 每天北京时间 12:00 提交。
+   多源并行取最新：站点自带版本 → GitHub raw → jsDelivr 镜像。
    ============================================================ */
+const DRAWS_SOURCES = [
+  `/data/draws.json`, // 随站点部署的版本
+  'https://raw.githubusercontent.com/lovexw/btc-draw/main/public/data/draws.json',
+  'https://cdn.jsdelivr.net/gh/lovexw/btc-draw@main/public/data/draws.json',
+];
+
 async function loadDraws() {
-  const r = await fetch(`/data/draws.json?t=${Date.now()}`, { cache: 'no-store' });
-  if (!r.ok) throw new Error(`加载开奖数据失败（HTTP ${r.status}）`);
-  return r.json();
+  const results = await Promise.allSettled(
+    DRAWS_SOURCES.map(async (url) => {
+      const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(6000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      if (!d || !Array.isArray(d.draws) || !d.draws.length) throw new Error('数据为空');
+      return d;
+    }),
+  );
+  const ok = results.filter((x) => x.status === 'fulfilled').map((x) => x.value);
+  if (!ok.length) throw new Error('加载开奖数据失败');
+  return ok.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))[0];
 }
 
 function renderLatest(data) {

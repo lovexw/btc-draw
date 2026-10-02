@@ -67,14 +67,11 @@ npx wrangler pages deploy        # 读取 wrangler.toml，部署 public/ 并打�
 
 方式 B（Git 集成）：Cloudflare 控制台 → Workers & Pages → 创建 Pages 项目 → 连接本仓库 → 构建命令留空、输出目录填 `public`。此后每次 Actions 提交开奖数据都会自动重新部署，无需部署钩子。
 
-### 3. 每日自动更新（仅方式 A 需要）
+### 3. 每日数据更新机制
 
-1. Cloudflare 控制台 → 该 Pages 项目 → 设置 → 构建钩子（Deploy hooks）→ 创建一个钩子，复制 URL。
-2. GitHub 仓库 → Settings → Secrets and variables → Actions → 新建 secret：
-   - Name：`CLOUDFLARE_DEPLOY_HOOK`
-   - Value：上一步的钩子 URL
+网站前端会**多源并行**加载开奖数据（站点自带版本 / GitHub raw / jsDelivr 镜像），自动选用 `updatedAt` 最新的那份。所以 Actions 每天提交开奖数据后，**即使 Cloudflare 不重新部署，网站也会展示最新开奖**。
 
-之后每天开奖数据提交后，Cloudflare 会自动重新部署，网站展示最新开奖。
+可选加强：在 Cloudflare 控制台给 Pages 项目创建一个**部署钩子**（Deploy hook），并配置 GitHub 仓库 secret `CLOUDFLARE_DEPLOY_HOOK`，Actions 提交数据后会顺便触发一次重新部署，让站点自带的数据副本也保持最新（对 SEO 与无 JS 场景更友好）。
 
 ## 数据文件格式（public/data/draws.json）
 
