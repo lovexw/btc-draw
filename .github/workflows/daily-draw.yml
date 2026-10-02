@@ -1,0 +1,63 @@
+# 每日开奖：北京时间 12:00（UTC 04:00）抓取开奖区块，更新 public/data/draws.json
+# GitHub 定时任务可能有几分钟延迟，但开奖目标时刻固定为北京时间 12:00，不影响结果。
+name: 每日开奖
+
+on:
+  schedule:
+    - cron: "0 4 * * *" # 北京时间每天 12:00（UTC+8）
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "today = 开今天的奖；backfill N（如 backfill 15）= 补最近 N 天"
+        default: "today"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-draw
+  cancel-in-progress: false
+
+jobs:
+  draw:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 执行开奖并更新数据
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          if [ -n "$MODE" ] && [ "$MODE" != "today" ]; then
+            node scripts/draw.mjs --backfill "${MODE#backfill}"
+          else
+            node scripts/draw.mjs
+          fi
+
+      - name: 提交开奖数据到 GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/draws.json
+          if git diff --cached --quiet; then
+            echo "开奖数据无变化，跳过提交"
+          else
+            git commit -m "lottery: $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M') 北京时间开奖更新"
+            git push
+          fi
+
+      - name: 触发 Cloudflare Pages 重新部署（可选）
+        env:
+          HOOK: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$HOOK" ]; then
+            curl -sf -X POST "$HOOK" && echo "已触发 Cloudflare Pages 部署" || echo "部署钩子调用失败（不影响数据提交）"
+          else
+            echo "未配置 CLOUDFLARE_DEPLOY_HOOK，跳过自动部署"
+          fi
