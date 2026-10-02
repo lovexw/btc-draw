@@ -55,7 +55,7 @@
       <div class="meta-item"><span class="meta-label">区块时间</span><span id="latest-time">—</span></div>
       <div class="meta-item meta-hash"><span class="meta-label">区块哈希</span><code id="latest-hash">—</code></div>
     </div>
-    <p class="hero-derive">开奖号码 = 区块哈希最后 6 位，<b>从末位往前</b>倒序排列</p>
+    <p class="hero-derive">开奖号码 = 从区块哈希末尾往前收集 6 个数字，<b>字母跳过</b></p>
   </section>
 
   <!-- ===== 开奖记录 ===== -->
@@ -129,7 +129,7 @@
     <span class="eyebrow">RULES</span>
     <h2>开奖规则</h2>
     <ol>
-      <li><b>号码来源：</b>取区块哈希（64 位十六进制）的<b>最后 6 位</b>，从末位往前倒序排列，即为开奖号码。例如哈希末尾为 <code>…9f3a1b</code>，则开奖号码为 <code>b1a3f9</code>。</li>
+      <li><b>号码来源：</b>从区块哈希（64 位十六进制）的<b>末尾往前</b>逐位扫描，只要数字 0-9，遇到字母 a-f 跳过，凑满 <b>6 个数字</b>为止，扫描顺序即为开奖号码。例如哈希末尾为 <code>…1e70fbbc135a</code>，从末尾往前收集到的数字依次是 5、3、1、0、7、1，开奖号码为 <code>531071</code>。</li>
       <li><b>开奖时间：</b>每天<b>北京时间 12:00 整</b>，取该时刻之前挖出的最新一个区块作为开奖区块，滚动保存最近 <b>15 天</b>的开奖号码。</li>
       <li><b>公平性：</b>区块哈希由全网算力决定，12:00 前无人能预知开奖区块，任何人都无法操控结果。开奖数据与代码全部开源，可随时复核。</li>
     </ol>

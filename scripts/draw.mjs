@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /* ============================================================
    BTC 开奖 — 开奖脚本
-   规则：每天北京时间 12:00，取该时刻之前挖出的最新区块，
-        开奖号码 = 区块哈希最后 6 位，从末位往前倒序排列。
+   规则：每天北京时间 12:00，取该时刻之前挖出的最新区块；
+        开奖号码 = 从区块哈希末尾往前收集 6 个数字（0-9，字母跳过），
+        扫描顺序即号码顺序（哈希最后一位数字 = 号码第一位）。
    数据：写入 public/data/draws.json，滚动保留最近 15 期。
 
    用法：
@@ -45,9 +46,19 @@ const tipHeight = async () => Number(await esplora('/blocks/tip/height'));
 const hashAt = async (h) => await esplora(`/block-height/${h}`);
 const blockAt = async (h) => JSON.parse(await esplora(`/block/${await hashAt(h)}`));
 
-/* ---------------- 号码规则 ---------------- */
+/* ---------------- 号码规则 ----------------
+   从哈希末尾往前逐位扫描，只要数字 0-9，遇到字母（a-f）跳过，
+   凑满 6 个数字为止；扫描顺序即开奖号码（哈希最后一位数字 = 号码第一位） */
 export function lotteryNumber(hash) {
-  return hash.slice(-6).split('').reverse().join('');
+  const digits = [];
+  for (let pass = 0; pass < 2 && digits.length < 6; pass++) {
+    for (let i = hash.length - 1; i >= 0 && digits.length < 6; i--) {
+      const c = hash[i];
+      if (c >= '0' && c <= '9') digits.push(c);
+    }
+  }
+  while (digits.length < 6) digits.push('0'); // 64 位哈希实际不会走到这里
+  return digits.join('');
 }
 
 /* ---------------- 北京时间工具 ---------------- */
@@ -107,7 +118,7 @@ function loadData() {
   try {
     return JSON.parse(readFileSync(DATA_FILE, 'utf8'));
   } catch {
-    return { rule: '开奖号码 = 开奖区块哈希最后 6 位倒序排列；开奖区块 = 每天北京时间 12:00 前挖出的最新区块', updatedAt: null, draws: [] };
+    return { rule: '开奖号码 = 从开奖区块哈希末尾往前收集 6 个数字（0-9，字母跳过，扫描顺序即号码顺序）；开奖区块 = 每天北京时间 12:00 前挖出的最新区块', updatedAt: null, draws: [] };
   }
 }
 

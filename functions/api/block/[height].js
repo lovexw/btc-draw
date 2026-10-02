@@ -25,8 +25,14 @@ export async function onRequestGet({ params }) {
       const rb = await fetch(`${base}/block/${hash}`, { signal: AbortSignal.timeout(8000) });
       if (!rb.ok) continue;
       const b = await rb.json();
-      // 号码规则与 scripts/draw.mjs、前端 app.js 一致：哈希后 6 位倒序
-      const number = b.id.slice(-6).split('').reverse().join('');
+      // 号码规则与 scripts/draw.mjs、前端 app.js 一致：
+      // 从哈希末尾往前收集 6 个数字（0-9，字母跳过），扫描顺序即号码顺序
+      const digits = [];
+      for (let i = b.id.length - 1; i >= 0 && digits.length < 6; i--) {
+        const c = b.id[i];
+        if (c >= '0' && c <= '9') digits.push(c);
+      }
+      const number = digits.join('');
       return json({ status: 'mined', height: b.height, hash: b.id, time: b.timestamp, number });
     } catch { /* 尝试下一个数据源 */ }
   }

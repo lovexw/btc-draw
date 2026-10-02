@@ -7,9 +7,27 @@
 const $ = (s) => document.querySelector(s);
 const BJ_OFFSET_MS = 8 * 3600 * 1000; // 北京时间 UTC+8（无夏令时）
 
-/* ---------- 号码计算（与 scripts/draw.mjs 保持一致） ---------- */
+/* ---------- 号码计算（与 scripts/draw.mjs 保持一致）
+   从哈希末尾往前收集 6 个数字（0-9，字母跳过），扫描顺序即号码顺序 ---------- */
 function lotteryNumber(hash) {
-  return hash.slice(-6).split('').reverse().join('');
+  const digits = [];
+  for (let pass = 0; pass < 2 && digits.length < 6; pass++) {
+    for (let i = hash.length - 1; i >= 0 && digits.length < 6; i--) {
+      const c = hash[i];
+      if (c >= '0' && c <= '9') digits.push(c);
+    }
+  }
+  while (digits.length < 6) digits.push('0');
+  return digits.join('');
+}
+
+/* 开奖号码用到的数字在哈希中的位置（用于哈希高亮） */
+function lotteryDigitIndices(hash) {
+  const idx = [];
+  for (let i = hash.length - 1; i >= 0 && idx.length < 6; i--) {
+    if (hash[i] >= '0' && hash[i] <= '9') idx.push(i);
+  }
+  return idx;
 }
 
 /* ---------- 时间格式化 ---------- */
@@ -58,10 +76,14 @@ function renderDigits(el, number, size) {
   }
 }
 
-/* ---------- 哈希高亮：最后 6 位加粗 ---------- */
+/* ---------- 哈希展示：高亮构成开奖号码的数字 ---------- */
 function hashHTML(hash) {
-  const head = hash.slice(0, -6), tail = hash.slice(-6);
-  return `${escapeHTML(head)}<b>${escapeHTML(tail)}</b>`;
+  const marks = new Set(lotteryDigitIndices(hash));
+  let out = '';
+  for (let i = 0; i < hash.length; i++) {
+    out += marks.has(i) ? `<b>${hash[i]}</b>` : escapeHTML(hash[i]);
+  }
+  return out;
 }
 function escapeHTML(s) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -209,7 +231,7 @@ $('#query-form').addEventListener('submit', async (e) => {
     } else {
       const number = lotteryNumber(block.hash);
       box.innerHTML = `
-        <p class="result-title">区块 #${block.height} 的开奖号码（哈希后 6 位倒序）</p>
+        <p class="result-title">区块 #${block.height} 的开奖号码（哈希末尾往前 6 个数字）</p>
         ${digitsBlockHTML(number)}
         ${resultRowsHTML(block)}`;
       wireDigits(box, number);
@@ -281,7 +303,7 @@ $('#estimate-form').addEventListener('submit', async (e) => {
         <div class="row"><span class="k">目标区块</span><span class="v">#${height}</span></div>
         <div class="row"><span class="k">还需挖出</span><span class="v">${gap} 个区块（约 ${(gap / 6 / 24).toFixed(1)} 天）</span></div>
         <div class="row"><span class="k">预计开奖</span><span class="v"><b>${fmtBJ(epochMs)}</b>（北京时间）</span></div>
-        <div class="row"><span class="k">开奖号码</span><span class="v">届时取该区块哈希后 6 位倒序</span></div>
+        <div class="row"><span class="k">开奖号码</span><span class="v">届时从该区块哈希末尾往前取 6 个数字（字母跳过）</span></div>
       </div>
       <div class="result-actions">
         <button type="button" class="btn btn-primary" id="ics-btn">📅 生成开奖日历通知（.ics）</button>
@@ -310,7 +332,7 @@ function buildICS() {
   const end = epochMs + 15 * 60e3;
   const desc =
     `比特币区块 #${height} 预计于北京时间 ${fmtBJ(epochMs)} 挖出。` +
-    `开奖号码：取该区块哈希最后 6 位并倒序排列。` +
+    `开奖号码：从该区块哈希末尾往前取 6 个数字（0-9，字母跳过，扫描顺序即号码顺序）。` +
     `开奖结果可在网站查询：区块挖出后输入高度 ${height} 即可查看。`;
   const lines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0',
@@ -346,7 +368,7 @@ async function copyNotice() {
   const { height, epochMs } = estimate;
   const text =
     `【BTC 开奖提醒】区块 #${height} 预计北京时间 ${fmtBJ(epochMs)} 挖出并开奖。\n` +
-    `规则：取该区块哈希最后 6 位，倒序排列即为开奖号码。\n` +
+    `规则：从该区块哈希末尾往前取 6 个数字（0-9，字母跳过），扫描顺序即为开奖号码。\n` +
     `挖出后可在网站输入高度 ${height} 查询结果。`;
   try {
     await navigator.clipboard.writeText(text);
