@@ -1,3 +1,5 @@
+> ⚠️ **本项目已于 2026-10-02 合并至 [lovexw/btchao-mono](https://github.com/lovexw/btchao-mono) 的 `sites/draw` 目录**（线上 https://lottery.btchao.com ）。本仓库已归档，每日开奖由 btchao-mono 的 `update-draw.yml` 继续，此处的代码与数据仅为历史存档。
+
 # BTC 开奖 🎱₿
 
 用比特币区块哈希当摇奖机的开奖平台。号码由全网算力决定，无人可操控。
