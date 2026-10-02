@@ -76,14 +76,16 @@ function renderDigits(el, number, size) {
   }
 }
 
-/* ---------- 哈希展示：高亮构成开奖号码的数字 ---------- */
+/* ---------- 哈希展示：高亮构成开奖号码的数字，等分为两行居中 ---------- */
 function hashHTML(hash) {
   const marks = new Set(lotteryDigitIndices(hash));
-  let out = '';
+  const mid = Math.ceil(hash.length / 2);
+  let half1 = '', half2 = '';
   for (let i = 0; i < hash.length; i++) {
-    out += marks.has(i) ? `<b>${hash[i]}</b>` : escapeHTML(hash[i]);
+    const ch = marks.has(i) ? `<b>${hash[i]}</b>` : escapeHTML(hash[i]);
+    if (i < mid) half1 += ch; else half2 += ch;
   }
-  return out;
+  return `<span class="hash-half">${half1}</span><span class="hash-half">${half2}</span>`;
 }
 function escapeHTML(s) {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
