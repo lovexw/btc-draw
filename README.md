@@ -2,7 +2,7 @@
 
 用比特币区块哈希当摇奖机的开奖平台。号码由全网算力决定，无人可操控。
 
-**线上地址**：https://btc-draw.pages.dev （部署后以实际域名为准）
+**线上地址**：<https://lottery.btchao.com>（备用：<https://btc-draw.pages.dev>）
 
 ## 开奖规则
 
@@ -56,22 +56,17 @@ node scripts/draw.mjs --date 2026-10-01 --force  # 重开指定日期
 
 代码推送到 GitHub 即可，Actions 无需任何密钥。手动触发：仓库 → Actions → 每日开奖 → Run workflow（`mode` 填 `backfill 15` 可补数据）。
 
-### 2. Cloudflare Pages
+### 2. Cloudflare Pages（Git 集成，已配置）
 
-方式 A（直传，最简单）：
+本项目已通过 **Git 集成** 连接 `lovexw/btc-draw` 仓库（Cloudflare GitHub App 授权一次即可）：
 
-```bash
-npx wrangler login
-npx wrangler pages deploy        # 读取 wrangler.toml，部署 public/ 并打包 functions/
-```
+- 构建命令：无；构建输出目录：`public`；Functions 从仓库根 `functions/` 自动打包
+- 自定义域名：`lottery.btchao.com`（zone 同账号，DNS 自动创建）
+- **每次 push 到 `main` 自动构建部署**——包括每天 Actions 提交的开奖数据，无需任何部署钩子或密钥
 
-方式 B（Git 集成）：Cloudflare 控制台 → Workers & Pages → 创建 Pages 项目 → 连接本仓库 → 构建命令留空、输出目录填 `public`。此后每次 Actions 提交开奖数据都会自动重新部署，无需部署钩子。
+每日数据流：北京时间 12:00 Actions 开奖 → commit 数据 → push → Cloudflare 自动重新部署 → 网站展示最新开奖，全程无人工干预。
 
-### 3. 每日数据更新机制
-
-网站前端会**多源并行**加载开奖数据（站点自带版本 / GitHub raw / jsDelivr 镜像），自动选用 `updatedAt` 最新的那份。所以 Actions 每天提交开奖数据后，**即使 Cloudflare 不重新部署，网站也会展示最新开奖**。
-
-可选加强：在 Cloudflare 控制台给 Pages 项目创建一个**部署钩子**（Deploy hook），并配置 GitHub 仓库 secret `CLOUDFLARE_DEPLOY_HOOK`，Actions 提交数据后会顺便触发一次重新部署，让站点自带的数据副本也保持最新（对 SEO 与无 JS 场景更友好）。
+> 备用方式（直传）：`npx wrangler pages deploy`，或用部署钩子（Pages 项目 → 设置 → 部署钩子 → 把 URL 配为 GitHub secret `CLOUDFLARE_DEPLOY_HOOK`）。前端本身也会从 GitHub raw / jsDelivr 拉取最新数据兜底。
 
 ## 数据文件格式（public/data/draws.json）
 
